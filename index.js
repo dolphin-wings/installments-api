@@ -58,12 +58,6 @@ app.get('/vtex/installments/:orderFormId', async (req, res) => {
   const { orderFormId } = req.params;
   const { paymentSystem } = req.query;
   
-  if (!paymentSystem) {
-    return res.status(400).json({
-      error: 'paymentSystem parameter is required'
-    });
-  }
-  
   console.log('Request params:', { orderFormId, paymentSystem });
   
   const headers = {
@@ -82,7 +76,39 @@ app.get('/vtex/installments/:orderFormId', async (req, res) => {
   }
 
   try {
-    const url = `https://${process.env.VTEX_ACCOUNT_NAME}.myvtex.com/api/checkout/pub/orderForm/${orderFormId}/installments?paymentSystem=${paymentSystem}`;
+    // First, get the orderForm to extract paymentSystem if not provided
+    let targetPaymentSystem = paymentSystem;
+    
+    if (!targetPaymentSystem) {
+      console.log('No paymentSystem provided, fetching from orderForm...');
+      const orderFormUrl = `https://${process.env.VTEX_ACCOUNT_NAME}.myvtex.com/api/checkout/pub/orderForm/${orderFormId}`;
+      console.log('Fetching orderForm from:', orderFormUrl);
+      
+      const orderFormResponse = await fetch(orderFormUrl, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!orderFormResponse.ok) {
+        throw new Error(`Failed to fetch orderForm: ${orderFormResponse.status}`);
+      }
+      
+      const orderFormData = await orderFormResponse.json();
+      console.log('OrderForm paymentData:', orderFormData.paymentData);
+      
+      // Get the first paymentSystem from payments array
+      if (orderFormData.paymentData && orderFormData.paymentData.payments && orderFormData.paymentData.payments.length > 0) {
+        targetPaymentSystem = orderFormData.paymentData.payments[0].paymentSystem;
+        console.log('Extracted paymentSystem from orderForm:', targetPaymentSystem);
+      } else {
+        return res.status(400).json({
+          error: 'No paymentSystem found in orderForm and none provided'
+        });
+      }
+    }
+    
+    // Now get the installments
+    const url = `https://${process.env.VTEX_ACCOUNT_NAME}.myvtex.com/api/checkout/pub/orderForm/${orderFormId}/installments?paymentSystem=${targetPaymentSystem}`;
     console.log('Making request to VTEX URL:', url);
     console.log('With headers:', headers);
     
