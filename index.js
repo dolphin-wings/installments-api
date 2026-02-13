@@ -74,14 +74,22 @@ app.get('/vtex/installments/:orderFormId', async (req, res) => {
   }
 
   try {
-    console.log('Making request to VTEX with headers:', headers);
-    const response = await fetch(`https://${process.env.VTEX_ACCOUNT_NAME}.myvtex.com/api/checkout/pub/orderForm/${orderFormId}/installments?paymentSystem=${paymentSystem}`, {
+    const url = `https://${process.env.VTEX_ACCOUNT_NAME}.myvtex.com/api/checkout/pub/orderForm/${orderFormId}/installments?paymentSystem=${paymentSystem}`;
+    console.log('Making request to VTEX URL:', url);
+    console.log('With headers:', headers);
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: headers
     });
 
+    console.log('VTEX response status:', response.status);
+    console.log('VTEX response headers:', response.headers);
+
     if (!response.ok) {
-      throw new Error(`VTEX API error: ${response.status}`);
+      const errorText = await response.text();
+      console.log('VTEX error response:', errorText);
+      throw new Error(`VTEX API error: ${response.status} - ${errorText}`);
     }
 
     const vtexData = await response.json();
