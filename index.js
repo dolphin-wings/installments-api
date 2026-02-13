@@ -58,6 +58,14 @@ app.get('/vtex/installments/:orderFormId', async (req, res) => {
   const { orderFormId } = req.params;
   const { paymentSystem } = req.query;
   
+  if (!paymentSystem) {
+    return res.status(400).json({
+      error: 'paymentSystem parameter is required'
+    });
+  }
+  
+  console.log('Request params:', { orderFormId, paymentSystem });
+  
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
